@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "brokenvault"
+version = "0.1.0"
+description = "BrokenVault deduplicating and resumable backup system"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "httpx>=0.24.0",
+    "pydantic>=2.0.0",
+    "typer>=0.9.0",
+    "rich>=13.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0"
+]
+
+[project.scripts]
+brokenvault = "brokenvault.client.cli:app"
+brokenvault-server = "brokenvault.server.app:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["brokenvault*"]
