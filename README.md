@@ -144,10 +144,12 @@ You can use the **Web Dashboard** (`http://127.0.0.1:8000/`) **or** the **CLI** 
 
 ### Step 1 — Prepare Sample Datasets
 
-Extract the provided sample datasets:
+> **Test Datasets**: Sample test datasets (`brokenvault_sample_v1.zip` and `brokenvault_sample_v2.zip`) are available for download under the [GitHub Releases](https://github.com/NoahReddyG/BrokenVault/releases/tag/version1) tab of this repository. You can use these to test and verify all features of the project.
+
+Extract the sample datasets into your project root:
 
 ```powershell
-# PowerShell
+# In PowerShell:
 Expand-Archive -Path "..\brokenvault_sample_v1.zip" -DestinationPath ".\sample_v1" -Force
 Expand-Archive -Path "..\brokenvault_sample_v2.zip" -DestinationPath ".\sample_v2" -Force
 ```
