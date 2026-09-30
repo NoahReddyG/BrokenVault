@@ -2,10 +2,10 @@
 
 ## Team
 
-- Member 1: Lead Systems Architect
-- Member 2: Backend Core Developer
-- Member 3: Client CLI Engineer
-- Member 4: Quality & Test Engineer
+- Godugunuri Noah Saunathan Reddy: Lead Systems Architect and Frontend Developer
+- Madavi Pruthvi Raj: Backend Core Developer
+- K. Pardha Saradhi: Client CLI Engineer
+- Anantam Neeraj Sai Preetam: Quality & Test Engineer
 
 ## Supported setup
 
