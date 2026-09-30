@@ -144,14 +144,30 @@ You can use the **Web Dashboard** (`http://127.0.0.1:8000/`) **or** the **CLI** 
 
 ### Step 1 — Prepare Sample Datasets
 
-> **Test Datasets**: Sample test datasets (`brokenvault_sample_v1.zip` and `brokenvault_sample_v2.zip`) are available for download under the [GitHub Releases](https://github.com/NoahReddyG/BrokenVault/releases/tag/version1) tab of this repository. You can use these to test and verify all features of the project.
+> **Test Datasets**: Sample test datasets (`brokenvault_sample_v1.zip` and `brokenvault_sample_v2.zip`) are available for download under the [GitHub Releases](https://github.com/NoahReddyG/BrokenVault/releases/tag/version1) tab of this repository.
 
-Extract the sample datasets into your project root:
+Download and extract the sample datasets directly in your project root:
 
+**PowerShell (Windows):**
 ```powershell
-# In PowerShell:
-Expand-Archive -Path "..\brokenvault_sample_v1.zip" -DestinationPath ".\sample_v1" -Force
-Expand-Archive -Path "..\brokenvault_sample_v2.zip" -DestinationPath ".\sample_v2" -Force
+# 1. Download from GitHub Releases (or download manually into project root)
+Invoke-WebRequest -Uri "https://github.com/NoahReddyG/BrokenVault/releases/download/version1/brokenvault_sample_v1.zip" -OutFile "brokenvault_sample_v1.zip"
+Invoke-WebRequest -Uri "https://github.com/NoahReddyG/BrokenVault/releases/download/version1/brokenvault_sample_v2.zip" -OutFile "brokenvault_sample_v2.zip"
+
+# 2. Extract into sample folders
+Expand-Archive -Path ".\brokenvault_sample_v1.zip" -DestinationPath ".\sample_v1" -Force
+Expand-Archive -Path ".\brokenvault_sample_v2.zip" -DestinationPath ".\sample_v2" -Force
+```
+
+**Bash / Linux / macOS:**
+```bash
+# 1. Download
+curl -LO "https://github.com/NoahReddyG/BrokenVault/releases/download/version1/brokenvault_sample_v1.zip"
+curl -LO "https://github.com/NoahReddyG/BrokenVault/releases/download/version1/brokenvault_sample_v2.zip"
+
+# 2. Extract
+unzip -q brokenvault_sample_v1.zip -d ./sample_v1
+unzip -q brokenvault_sample_v2.zip -d ./sample_v2
 ```
 
 ---
