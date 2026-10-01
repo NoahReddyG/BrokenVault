@@ -4,6 +4,42 @@ BrokenVault is a high-performance, deduplicating, content-addressed backup and r
 
 ---
 
+## Web Frontend (`frontend/`)
+
+A premium, zero-dependency single-page application served directly by the FastAPI server at `http://127.0.0.1:8000/`. No separate dev server or build step is required.
+
+### Structure
+```
+BitnBuild/
+├── frontend/
+│   ├── index.html   # SPA shell — sidebar, tabs, all panels
+│   ├── style.css    # Dark-mode design system (CSS variables, animations, glassmorphism)
+│   └── app.js       # All API communication and UI logic (Vanilla JS, no frameworks)
+```
+
+### How it is served
+- FastAPI's `StaticFiles` mounts the `frontend/` directory at `/assets/`.
+- The `GET /` route returns `frontend/index.html` via `FileResponse`.
+- All API calls from the browser target the same origin (`/api/v1/*`), avoiding CORS complexity.
+
+### Feature-to-tab mapping & dual-mode independence
+
+The web dashboard and CLI are completely decoupled and independently functional:
+- **Direct Frontend Actions**: The dashboard triggers backups via `POST /api/v1/actions/backup/stream` (SSE streaming) and restores via `POST /api/v1/actions/restore`, updating the live database and CAS without touching the terminal.
+- **Independent CLI Execution**: The CLI client communicates over the exact same `/api/v1/*` protocol endpoints.
+
+| Tab | Feature | Direct Execution Capability | CLI Equivalent |
+|-----|---------|-----------------------------|----------------|
+| **Dashboard** | Vault Overview | Live stat cards (versions, logical bytes, bytes saved, dedup ratio) + per-version storage bar chart | `list` / aggregate |
+| **Backup** | Feature 1 | Enter folder path (or pick a preset), optional label, optional resume upload ID → click **Start Backup** | `brokenvault backup <PATH>` |
+| **Versions** | Feature 2 | Sortable version table; Manifest Explorer; 1-click Restore action per row | `brokenvault list` |
+| **Restore** | Feature 3 | Direct in-browser byte-for-byte reconstruction to a target folder with exact `mtime` restoration | `brokenvault restore <ID> <DEST>` |
+| **Verify** | Feature 4 | Live SHA-256 cryptographic audit (`GET /api/v1/verify`) with blast-radius impact report | `brokenvault verify` |
+| **Dedup Stats** | Feature 5 | Visual comparison bars of uploaded vs reused bytes across all versions | Aggregated from version list |
+| **Resumable** | Feature 6 | On backup start → auto-redirected here; live chunk-by-chunk SSE progress feed, progress bar, dedup stats; resume interrupted sessions via upload ID | `brokenvault backup --upload-id <ID>` |
+
+---
+
 ## Main parts
 
 ### Client Architecture (`brokenvault-cli`)
@@ -42,6 +78,15 @@ vault_data/
 
 ```mermaid
 flowchart TB
+    subgraph WebFrontend["Web Dashboard (frontend/)"]
+        BackupTab["Backup Tab — Feature 1"]
+        ResumableTab["Resumable Tab — Feature 6 (SSE Live Feed)"]
+        VersionsTab["Versions Tab — Feature 2"]
+        RestoreTab["Restore Tab — Feature 3"]
+        VerifyTab["Verify Tab — Feature 4"]
+        DedupTab["Dedup Stats Tab — Feature 5"]
+    end
+
     subgraph ClientProcess["Client Process (brokenvault-cli)"]
         Scanner["Directory Crawler & POSIX Normalizer"]
         ChunkerEngine["Fixed Chunking (512 KiB) & SHA-256"]
@@ -52,11 +97,18 @@ flowchart TB
 
     subgraph ServerProcess["Server Process (brokenvault-server)"]
         APIRouter["FastAPI Endpoints (/api/v1)"]
+        SSEEndpoint["SSE Streaming (/actions/backup/stream)"]
         SessionMgr["Upload Session Coordinator"]
         CASStore["CAS Engine (vault_data/chunks/xx/yy/)"]
         AuditEngine["Integrity & Blast Radius Auditor"]
         DBEngine[(SQLite Metadata Store - WAL Mode)]
     end
+
+    BackupTab -->|POST /api/v1/actions/backup/stream| SSEEndpoint
+    SSEEndpoint -->|SSE chunk events| ResumableTab
+    RestoreTab -->|POST /api/v1/actions/restore| APIRouter
+    VerifyTab  -->|GET /api/v1/verify| APIRouter
+    VersionsTab-->|GET /api/v1/versions| APIRouter
 
     Scanner --> ChunkerEngine
     ChunkerEngine --> SessionCache
@@ -64,11 +116,25 @@ flowchart TB
     ClientTransport <-->|HTTP REST| APIRouter
     APIRouter --> SessionMgr
     APIRouter --> CASStore
+    APIRouter --> SSEEndpoint
+    SSEEndpoint --> SessionMgr
+    SSEEndpoint --> CASStore
     SessionMgr --> DBEngine
     CASStore --> AuditEngine
     DBEngine --> AuditEngine
     RestoreEngine <-->|Fetch Manifest & Download Chunks| APIRouter
 ```
+
+### SSE Streaming Backup (`POST /api/v1/actions/backup/stream`)
+
+When a backup is triggered from the **Backup tab**, the browser receives a Server-Sent Events stream:
+
+1. **`started`** — emitted once; carries `upload_id`, `version_id`, `total_files`, `total_chunks`, `total_bytes`, `new_chunks`, `reused_chunks`.
+2. **`chunk`** — emitted once per chunk; carries `chunk_id`, `file`, `status` (`uploaded` | `reused`), `done_chunks`, `total_chunks`, `uploaded_bytes`, `total_bytes`.
+3. **`done`** — emitted on successful commit; carries final `version_id`, `upload_id`, logical/uploaded/reused byte totals.
+4. **`error`** — emitted if any step fails; carries `message`.
+
+The frontend reads the stream with the Fetch API (`ReadableStream`) instead of `EventSource` because `EventSource` only supports GET requests. The Resumable tab renders each event in real time: animated progress bar, per-chunk feed rows colour-coded as **NEW** (purple) or **REUSED** (green), and a completion summary card.
 
 ---
 

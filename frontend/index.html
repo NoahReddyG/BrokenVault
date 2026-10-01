@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrokenVault — Deduplicating Backup Dashboard</title>
+  <meta name="description" content="BrokenVault web dashboard: backup, restore, verify and manage your deduplicating vault with a real-time visual interface." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/style.css?v=3" />
+</head>
+<body>
+  <!-- Ambient background blobs -->
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+  <div class="bg-blob blob-3"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="brand-name">BrokenVault</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-tab="dashboard" id="nav-dashboard">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="2" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-tab="backup" id="nav-backup">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none"><path d="M10 13V4m0 9l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15v1a2 2 0 002 2h10a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>Backup</span>
+      </button>
+      <button class="nav-item" data-tab="versions" id="nav-versions">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none"><path d="M4 4h12v12H4V4z" stroke="currentColor" stroke-width="1.6" rx="2"/><path d="M8 9h4M8 12h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Versions</span>
+      </button>
+      <button class="nav-item" data-tab="restore" id="nav-restore">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none"><path d="M10 7V16m0-9l3 3M10 7l-3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 5v-1a2 2 0 012-2h10a2 2 0 012 2v1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>Restore</span>
+      </button>
+      <button class="nav-item" data-tab="verify" id="nav-verify">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none"><path d="M10 2l1.5 4.5H16l-3.5 2.5 1.5 4.5L10 11l-4 2.5 1.5-4.5L4 6.5h4.5L10 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>Verify</span>
+      </button>
+      <button class="nav-item" data-tab="dedup" id="nav-dedup">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none"><circle cx="7" cy="10" r="4" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="10" r="4" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span>Dedup Stats</span>
+      </button>
+      <button class="nav-item" data-tab="resumable" id="nav-resumable">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none"><path d="M10 4v6l4 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span>Resumable</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-status" id="server-status-indicator">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-label">Connecting…</span>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+        <span class="page-subtitle" id="page-subtitle">Real-time vault overview</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost btn-sm" id="refresh-btn" title="Refresh">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4 4a8 8 0 1 1 0 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 4V8H8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Refresh
+        </button>
+        <div class="server-badge" id="server-badge">
+          <span class="pulse-ring"></span>
+          <span id="server-badge-text">http://127.0.0.1:8000</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ─── TAB: DASHBOARD ─── -->
+    <section class="tab-panel active" id="tab-dashboard">
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card" id="stat-versions">
+          <div class="stat-icon icon-blue">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="total-versions">—</div>
+            <div class="stat-label">Completed Versions</div>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-logical">
+          <div class="stat-icon icon-purple">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2v16M2 10h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="total-logical">—</div>
+            <div class="stat-label">Total Logical Data</div>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-saved">
+          <div class="stat-icon icon-green">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="total-saved">—</div>
+            <div class="stat-label">Bytes Saved (Dedup)</div>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-ratio">
+          <div class="stat-icon icon-amber">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.7"/><path d="M10 6v4l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="dedup-ratio">—</div>
+            <div class="stat-label">Dedup Ratio</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dedup bar chart -->
+      <div class="card mt-6" id="dashboard-chart-card">
+        <div class="card-header">
+          <h2 class="card-title">Storage Breakdown by Version</h2>
+          <span class="card-badge">Live</span>
+        </div>
+        <div class="chart-container" id="version-chart">
+          <div class="empty-state">No backup versions found. Run a backup first.</div>
+        </div>
+      </div>
+
+      <!-- Recent versions table -->
+      <div class="card mt-4" id="recent-versions-card">
+        <div class="card-header">
+          <h2 class="card-title">Recent Versions</h2>
+        </div>
+        <div class="table-wrap" id="recent-versions-table">
+          <div class="empty-state">No versions yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── TAB: BACKUP ─── -->
+    <section class="tab-panel" id="tab-backup">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Backup a Folder</h2>
+          <span class="card-badge info">Feature 1</span>
+        </div>
+        <p class="card-desc">Specify a local folder path and click <strong>Start Backup</strong> to execute directly in the browser, or copy the CLI command below to run independently from terminal.</p>
+
+        <div class="form-group">
+          <label class="form-label" for="backup-path">Source Folder Path</label>
+          <input class="form-input" type="text" id="backup-path" placeholder="e.g. ./tests or ./sample_v1 or C:\data" />
+          <div class="preset-chips" style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+            <button type="button" class="btn btn-ghost btn-sm preset-btn" data-path="./tests" data-label="tests_backup">Quick test: ./tests</button>
+            <button type="button" class="btn btn-ghost btn-sm preset-btn" data-path="./sample_v1" data-label="sample_v1">Preset: ./sample_v1</button>
+            <button type="button" class="btn btn-ghost btn-sm preset-btn" data-path="./sample_v2" data-label="sample_v2">Preset: ./sample_v2</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="backup-label">Label (optional)</label>
+          <input class="form-input" type="text" id="backup-label" placeholder="e.g. sample_v1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="backup-upload-id">Resume Upload ID (optional)</label>
+          <input class="form-input" type="text" id="backup-upload-id" placeholder="e.g. up_abc123  — leave blank for new backup" />
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" id="backup-btn">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 13V4m0 9l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Start Backup
+          </button>
+        </div>
+
+        <div class="result-panel hidden" id="backup-result"></div>
+      </div>
+    </section>
+
+    <!-- ─── TAB: VERSIONS ─── -->
+    <section class="tab-panel" id="tab-versions">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Completed Versions</h2>
+          <span class="card-badge info">Feature 2</span>
+          <button class="btn btn-ghost btn-sm ml-auto" id="versions-refresh-btn">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 4a8 8 0 1 1 0 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 4V8H8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Refresh
+          </button>
+        </div>
+        <div class="table-wrap" id="versions-table">
+          <div class="empty-state">Loading versions…</div>
+        </div>
+      </div>
+
+      <!-- Manifest viewer -->
+      <div class="card mt-4" id="manifest-card">
+        <div class="card-header">
+          <h2 class="card-title">Manifest Explorer</h2>
+          <span class="card-badge">Click a version above to inspect</span>
+        </div>
+        <div id="manifest-viewer">
+          <div class="empty-state">Select a version to view its manifest entries.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── TAB: RESTORE ─── -->
+    <section class="tab-panel" id="tab-restore">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Restore a Version</h2>
+          <span class="card-badge info">Feature 3</span>
+        </div>
+        <p class="card-desc">Reconstruct a backup version byte-for-byte into a destination folder, including exact modification timestamps.</p>
+
+        <div class="form-group">
+          <label class="form-label" for="restore-version-id">Version ID</label>
+          <div class="input-with-dropdown">
+            <input class="form-input" type="text" id="restore-version-id" placeholder="e.g. v_f4b46ed7e2b3" />
+            <button class="btn btn-ghost btn-sm" id="restore-pick-btn">Pick →</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="restore-dest">Destination Folder Path</label>
+          <input class="form-input" type="text" id="restore-dest" placeholder="e.g. ./restored_v1" />
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-secondary" id="restore-btn">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 7V16m0-9l3 3M10 7l-3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Restore Version
+          </button>
+        </div>
+
+        <div class="result-panel hidden" id="restore-result"></div>
+      </div>
+
+      <!-- Version picker dropdown -->
+      <div class="card mt-4 card-dim" id="restore-version-picker">
+        <div class="card-header"><h2 class="card-title">Available Versions</h2></div>
+        <div id="restore-version-list">
+          <div class="empty-state">Loading…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── TAB: VERIFY ─── -->
+    <section class="tab-panel" id="tab-verify">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Cryptographic Integrity Audit</h2>
+          <span class="card-badge info">Feature 4</span>
+        </div>
+        <p class="card-desc">Recalculates SHA-256 digests for every stored chunk. Identifies missing chunks and hash mismatches, and reports the full blast-radius impact for each damaged chunk.</p>
+
+        <div class="form-actions">
+          <button class="btn btn-danger" id="verify-btn">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 2l1.5 4.5H16l-3.5 2.5 1.5 4.5L10 11l-4 2.5 1.5-4.5L4 6.5h4.5L10 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            Run Audit
+          </button>
+        </div>
+
+        <div class="result-panel hidden" id="verify-result"></div>
+      </div>
+
+      <!-- Verify output panel -->
+      <div class="card mt-4" id="verify-report-card">
+        <div class="card-header"><h2 class="card-title">Audit Report</h2></div>
+        <div id="verify-report">
+          <div class="empty-state">Run the audit to see results.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── TAB: DEDUP STATS ─── -->
+    <section class="tab-panel" id="tab-dedup">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Deduplication Analytics</h2>
+          <span class="card-badge info">Feature 5</span>
+        </div>
+        <p class="card-desc">Compare uploaded vs reused bytes across all versions to visualise deduplication savings.</p>
+        <button class="btn btn-primary" id="dedup-refresh-btn" style="margin-top:8px">Reload Stats</button>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="stats-grid mt-4" id="dedup-stats-grid">
+        <div class="stat-card"><div class="stat-icon icon-blue"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 10h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10 3v14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="stat-body"><div class="stat-value" id="dd-total">—</div><div class="stat-label">Total Logical</div></div></div>
+        <div class="stat-card"><div class="stat-icon icon-amber"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="9" width="14" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6a3 3 0 016 0v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="stat-body"><div class="stat-value" id="dd-uploaded">—</div><div class="stat-label">Uploaded (New)</div></div></div>
+        <div class="stat-card"><div class="stat-icon icon-green"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="10" r="3" fill="currentColor"/></svg></div><div class="stat-body"><div class="stat-value" id="dd-reused">—</div><div class="stat-label">Reused (Dedup)</div></div></div>
+        <div class="stat-card"><div class="stat-icon icon-purple"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 16l4-8 4 4 4-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="stat-body"><div class="stat-value" id="dd-ratio">—</div><div class="stat-label">Global Dedup Ratio</div></div></div>
+      </div>
+
+      <!-- Per-version breakdown bars -->
+      <div class="card mt-4">
+        <div class="card-header"><h2 class="card-title">Per-Version Breakdown</h2></div>
+        <div id="dedup-chart-detail">
+          <div class="empty-state">Load stats to see breakdown.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── TAB: RESUMABLE ─── -->
+    <section class="tab-panel" id="tab-resumable">
+      <!-- Header card -->
+      <div class="card" id="resumable-header-card">
+        <div class="card-header">
+          <h2 class="card-title">Resumable Backup — Live Progress</h2>
+          <span class="card-badge info">Feature 6</span>
+        </div>
+        <p class="card-desc" id="resumable-desc">Start a backup from the <strong>Backup</strong> tab to see real-time chunk-by-chunk progress here. You can also resume an interrupted session using its Upload ID below.</p>
+
+        <!-- Resume an existing session -->
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label" for="resume-upload-id">Resume an interrupted backup — Upload ID</label>
+          <div class="input-with-dropdown">
+            <input class="form-input" type="text" id="resume-upload-id" placeholder="e.g. up_abc123…" />
+            <input class="form-input" type="text" id="resume-source-path" placeholder="Source folder path" style="max-width:260px" />
+            <button class="btn btn-secondary btn-sm" id="resume-btn">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 4v6l4 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.7"/></svg>
+              Resume
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live progress panel -->
+      <div class="card mt-4" id="resumable-progress-card">
+        <div class="card-header">
+          <h2 class="card-title" id="resumable-status-title">No active backup</h2>
+          <span class="badge-mono" id="resumable-upload-id-badge" style="display:none"></span>
+        </div>
+
+        <!-- Overall progress bar -->
+        <div id="resumable-progress-wrap" style="display:none; padding: 0 4px 4px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+            <span class="form-label" style="margin:0" id="resumable-pct-label">0%</span>
+            <span class="code-mono" id="resumable-bytes-label" style="font-size:11px;color:var(--text-muted)">0 B / 0 B</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" id="resumable-progress-bar" style="width:0%"></div>
+          </div>
+          <div style="display:flex; gap:16px; margin-top:10px; flex-wrap:wrap">
+            <span class="stat-chip" id="rc-files">0 files</span>
+            <span class="stat-chip stat-chip-new" id="rc-new">0 new chunks</span>
+            <span class="stat-chip stat-chip-reused" id="rc-reused">0 reused</span>
+            <span class="stat-chip" id="rc-total">0 total</span>
+          </div>
+        </div>
+
+        <!-- Chunk event feed -->
+        <div id="resumable-feed" style="margin-top:12px; max-height:340px; overflow-y:auto">
+          <div class="empty-state" id="resumable-feed-empty">Waiting for backup to start…</div>
+        </div>
+      </div>
+
+      <!-- Completion summary -->
+      <div class="card mt-4 hidden" id="resumable-done-card">
+        <div class="card-header">
+          <h2 class="card-title">✓ Backup Complete</h2>
+          <span class="card-badge success">Done</span>
+        </div>
+        <div id="resumable-done-body"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast notifications -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/assets/app.js?v=3"></script>
+</body>
+</html>
